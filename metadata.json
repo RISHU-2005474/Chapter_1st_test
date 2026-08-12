@@ -1,0 +1,6 @@
+{
+  "name": "O Level Computer Module 1 MCQ Examination",
+  "description": "Interactive 100-question online exam portal for O Level Chapter 1: Introduction to Computer with live timer, question palette, and result analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
