@@ -5,8 +5,11 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { QUESTIONS } from './data/questions';
-import { StudentInfo, ExamStatus, ExamResultStats, Question } from './types';
+import { CHAPTERS } from './data/chapters';
+import { getQuestionsForChapter } from './data/chapterQuestions';
+import { StudentInfo, ExamStatus, ExamResultStats, Question, Chapter } from './types';
 import { Header } from './components/Header';
+import { ChapterSelection } from './components/ChapterSelection';
 import { StudentRegister } from './components/StudentRegister';
 import { QuestionCard } from './components/QuestionCard';
 import { QuestionPalette } from './components/QuestionPalette';
@@ -16,12 +19,14 @@ import { TimeoutModal } from './components/TimeoutModal';
 import { shuffleQuestionsForUser } from './utils/shuffle';
 import { saveAttempt, StoredAttempt } from './utils/examStorage';
 
-const TOTAL_QUESTIONS = QUESTIONS.length; // 100
+const TOTAL_QUESTIONS = 100;
 const EXAM_DURATION_SECONDS = 3600; // 60 minutes = 3600 seconds
 
 export default function App() {
+  const [selectedChapter, setSelectedChapter] = useState<Chapter>(CHAPTERS[0]);
   const [student, setStudent] = useState<StudentInfo | null>(null);
-  const [examStatus, setExamStatus] = useState<ExamStatus>('registration');
+  const [examStatus, setExamStatus] = useState<ExamStatus>('chapter_selection');
+  const [chapterQuestions, setChapterQuestions] = useState<Question[]>(QUESTIONS);
   const [activeQuestions, setActiveQuestions] = useState<Question[]>(QUESTIONS);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [userAnswers, setUserAnswers] = useState<(number | null)[]>(
@@ -34,6 +39,20 @@ export default function App() {
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState<boolean>(false);
   const [isTimeoutModalOpen, setIsTimeoutModalOpen] = useState<boolean>(false);
   const [timeSpent, setTimeSpent] = useState<number>(0);
+
+  // Chapter selection handler
+  const handleSelectChapter = (chapter: Chapter) => {
+    const qList = getQuestionsForChapter(chapter.id);
+    setSelectedChapter(chapter);
+    setChapterQuestions(qList);
+    setActiveQuestions(qList);
+    setExamStatus('registration');
+  };
+
+  // Return to chapter selection
+  const handleChangeChapter = () => {
+    setExamStatus('chapter_selection');
+  };
 
   // Helper to calculate exam results using current active/shuffled questions
   const calculateResults = useCallback((): ExamResultStats => {
@@ -160,7 +179,7 @@ export default function App() {
 
   // Start exam trigger - shuffles questions specifically for the candidate's email
   const handleStartExam = (info: StudentInfo) => {
-    const shuffled = shuffleQuestionsForUser(QUESTIONS, info.rollNumber);
+    const shuffled = shuffleQuestionsForUser(chapterQuestions, info.rollNumber);
     setStudent(info);
     setActiveQuestions(shuffled);
     setExamStatus('ongoing');
@@ -239,7 +258,7 @@ export default function App() {
     setTimeSpent(0);
     setCurrentIndex(0);
     setStudent(null);
-    setActiveQuestions(QUESTIONS);
+    setActiveQuestions(chapterQuestions);
   };
 
   const answeredCount = userAnswers.filter((a) => a !== null).length;
@@ -258,21 +277,30 @@ export default function App() {
       {/* Main Header */}
       <Header
         student={student}
+        selectedChapter={selectedChapter}
         timeLeft={timeLeft}
         totalQuestions={TOTAL_QUESTIONS}
         answeredCount={answeredCount}
         onOpenSubmitModal={() => setIsSubmitModalOpen(true)}
         examStarted={examStatus === 'ongoing'}
         examSubmitted={examStatus === 'submitted'}
+        onChangeChapter={handleChangeChapter}
       />
 
       {/* Main Container Viewport */}
       <main className="relative z-10 flex-1 flex flex-col">
+        {/* VIEW 0: Landing Chapter Selection */}
+        {examStatus === 'chapter_selection' && (
+          <ChapterSelection onSelectChapter={handleSelectChapter} />
+        )}
+
         {/* VIEW 1: Candidate Registration */}
         {examStatus === 'registration' && (
           <StudentRegister
+            selectedChapter={selectedChapter}
             onStartExam={handleStartExam}
             onViewPastAttempt={handleViewPastAttempt}
+            onChangeChapter={handleChangeChapter}
           />
         )}
 
@@ -341,4 +369,5 @@ export default function App() {
     </div>
   );
 }
+
 

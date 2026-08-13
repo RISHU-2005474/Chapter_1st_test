@@ -1,26 +1,30 @@
 import React from 'react';
-import { Clock, ShieldAlert, User, Award, FileText } from 'lucide-react';
-import { StudentInfo } from '../types';
+import { Clock, ShieldAlert, User, Grid } from 'lucide-react';
+import { StudentInfo, Chapter } from '../types';
 import logoImg from '../assets/images/rishu_sir_logo_1786638561837.jpg';
 
 interface HeaderProps {
   student: StudentInfo | null;
+  selectedChapter: Chapter;
   timeLeft: number; // in seconds
   totalQuestions: number;
   answeredCount: number;
   onOpenSubmitModal: () => void;
   examStarted: boolean;
   examSubmitted: boolean;
+  onChangeChapter?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   student,
+  selectedChapter,
   timeLeft,
   totalQuestions,
   answeredCount,
   onOpenSubmitModal,
   examStarted,
   examSubmitted,
+  onChangeChapter,
 }) => {
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -36,7 +40,11 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="sticky top-0 z-40 h-16 border-b border-white/10 backdrop-blur-md bg-slate-900/80 px-4 sm:px-8 flex items-center justify-between shadow-lg">
       {/* Left branding */}
       <div className="flex items-center gap-3 sm:gap-4">
-        <div className="relative w-10 h-10 rounded-xl overflow-hidden border border-amber-500/40 shadow-lg shadow-indigo-500/20 shrink-0">
+        <div
+          onClick={onChangeChapter}
+          className="relative w-10 h-10 rounded-xl overflow-hidden border border-amber-500/40 shadow-lg shadow-indigo-500/20 shrink-0 cursor-pointer hover:scale-105 transition-transform"
+          title="Return to Chapter Selection"
+        >
           <img
             src={logoImg}
             alt="Rishu Sir Test Series Logo"
@@ -50,17 +58,29 @@ export const Header: React.FC<HeaderProps> = ({
               Rishu_Sir_Test_Series
             </h1>
             <span className="hidden md:inline-block px-2 py-0.5 text-[10px] bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 rounded font-mono">
-              O Level M1-R5
+              {selectedChapter.code}
             </span>
           </div>
-          <p className="text-xs text-slate-400 font-medium">
-            Chapter 1: Introduction to Computer
+          <p className="text-xs text-slate-300 font-semibold truncate max-w-[220px] sm:max-w-xs">
+            {selectedChapter.badge}: {selectedChapter.title}
           </p>
         </div>
       </div>
 
       {/* Middle/Right: Student Info & Live Timer */}
-      <div className="flex items-center gap-4 sm:gap-8">
+      <div className="flex items-center gap-3 sm:gap-6">
+        {/* Change Chapter button (when not mid-exam) */}
+        {!examStarted && onChangeChapter && (
+          <button
+            type="button"
+            onClick={onChangeChapter}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/15 border border-white/10 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
+          >
+            <Grid className="w-3.5 h-3.5 text-amber-400" />
+            <span>All Chapters</span>
+          </button>
+        )}
+
         {student && (
           <div className="hidden lg:flex items-center gap-3 bg-white/5 border border-white/10 px-3.5 py-1.5 rounded-xl">
             <div className="w-8 h-8 rounded-lg bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-300">
@@ -115,3 +135,4 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
+

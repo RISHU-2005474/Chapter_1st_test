@@ -1,18 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { StudentInfo } from '../types';
+import { StudentInfo, Chapter } from '../types';
 import { getAttempt, getAttemptAsync, StoredAttempt } from '../utils/examStorage';
 import { SupabaseSetupModal } from './SupabaseSetupModal';
-import { Database, BookOpen, CheckCircle, Clock, Award, Shield, AlertCircle, ArrowRight, Sparkles, Shuffle, Lock, Eye, Code } from 'lucide-react';
+import { Database, BookOpen, CheckCircle, Clock, Award, Shield, AlertCircle, ArrowRight, Sparkles, Shuffle, Lock, Eye, Code, Grid } from 'lucide-react';
 import logoImg from '../assets/images/rishu_sir_logo_1786638561837.jpg';
 
 interface StudentRegisterProps {
+  selectedChapter: Chapter;
   onStartExam: (info: StudentInfo) => void;
   onViewPastAttempt: (attempt: StoredAttempt) => void;
+  onChangeChapter?: () => void;
 }
 
 export const StudentRegister: React.FC<StudentRegisterProps> = ({
+  selectedChapter,
   onStartExam,
   onViewPastAttempt,
+  onChangeChapter,
 }) => {
   const [name, setName] = useState('');
   const [rollNumber, setRollNumber] = useState('');
@@ -83,26 +87,43 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
           <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl pointer-events-none" />
 
           <div>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="relative w-12 h-12 rounded-2xl overflow-hidden border border-amber-500/40 shadow-xl shadow-indigo-500/30 shrink-0">
-                <img
-                  src={logoImg}
-                  alt="Rishu Sir Test Series Logo"
-                  className="w-full h-full object-cover"
-                  referrerPolicy="no-referrer"
-                />
+            <div className="flex items-center justify-between gap-2 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="relative w-12 h-12 rounded-2xl overflow-hidden border border-amber-500/40 shadow-xl shadow-indigo-500/30 shrink-0">
+                  <img
+                    src={logoImg}
+                    alt="Rishu Sir Test Series Logo"
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full text-indigo-300 text-xs font-semibold">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <span>{selectedChapter.badge}</span>
+                </div>
               </div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full text-indigo-300 text-xs font-semibold">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                Official Examination Portal
-              </div>
+
+              {onChangeChapter && (
+                <button
+                  type="button"
+                  onClick={onChangeChapter}
+                  className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 rounded-xl text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                  title="Select a different chapter"
+                >
+                  <Grid className="w-3.5 h-3.5" />
+                  <span>Change</span>
+                </button>
+              )}
             </div>
 
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight mb-3">
-              Rishu_Sir_Test_Series
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight mb-2">
+              {selectedChapter.title}
             </h2>
-            <p className="text-sm text-indigo-200 font-medium mb-6">
-              O Level Computer Course (M1-R5) — Chapter 1: Introduction to Computer
+            <p className="text-xs font-mono text-amber-400 uppercase tracking-wider mb-2">
+              Rishu_Sir_Test_Series • {selectedChapter.code}
+            </p>
+            <p className="text-xs text-slate-300 font-medium mb-6 leading-relaxed">
+              {selectedChapter.description}
             </p>
 
             {/* Quick Metrics */}
@@ -112,7 +133,7 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
                   <BookOpen className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-lg font-bold text-white leading-none">100</div>
+                  <div className="text-lg font-bold text-white leading-none">{selectedChapter.totalQuestions}</div>
                   <div className="text-[11px] text-slate-400 mt-1">Total MCQs</div>
                 </div>
               </div>
@@ -122,7 +143,7 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
                   <Clock className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-lg font-bold text-white leading-none">60 Mins</div>
+                  <div className="text-lg font-bold text-white leading-none">{selectedChapter.timeLimitMinutes} Mins</div>
                   <div className="text-[11px] text-slate-400 mt-1">Duration</div>
                 </div>
               </div>
@@ -148,6 +169,7 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
               </div>
             </div>
           </div>
+
 
           <div className="border-t border-white/10 pt-4 text-xs text-slate-400 space-y-2">
             <div className="flex items-center justify-between">

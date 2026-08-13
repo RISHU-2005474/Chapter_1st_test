@@ -15,7 +15,21 @@ export interface StudentInfo {
   rollNumber: string;
 }
 
-export type ExamStatus = 'registration' | 'ongoing' | 'submitted';
+export interface Chapter {
+  id: number;
+  code: string;
+  title: string;
+  shortTitle: string;
+  description: string;
+  iconName: 'Monitor' | 'Cpu' | 'FileText' | 'Table' | 'Presentation';
+  totalQuestions: number;
+  timeLimitMinutes: number;
+  badge: string;
+  gradient: string;
+  accentColor: string;
+}
+
+export type ExamStatus = 'chapter_selection' | 'registration' | 'ongoing' | 'submitted';
 
 export interface ExamResultStats {
   score: number;
@@ -28,3 +42,4 @@ export interface ExamResultStats {
   timeSpentSeconds: number;
   grade: 'S' | 'A' | 'B' | 'C' | 'D' | 'F';
 }
+
