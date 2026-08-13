@@ -72,7 +72,7 @@ export async function getAttemptAsync(emailOrRoll: string): Promise<StoredAttemp
       return attempt;
     }
   } catch (err) {
-    console.warn('Supabase fetch error:', err);
+    // Silent catch for initial setup before table is created
   }
 
   return null;
@@ -111,12 +111,23 @@ export async function saveAttempt(attempt: StoredAttempt): Promise<void> {
       .upsert(payload, { onConflict: 'email_roll' });
 
     if (error) {
-      console.error('Supabase upsert error:', error.message);
+      if (
+        error.message?.includes('schema cache') ||
+        error.message?.includes('exam_attempts') ||
+        error.code === 'PGRST301' ||
+        error.code === '42P01'
+      ) {
+        console.info(
+          'Supabase Info: The table "public.exam_attempts" does not exist in your Supabase project yet. The exam result has been safely stored in local browser storage. Run the SQL script provided in the UI to create the table in Supabase.'
+        );
+      } else {
+        console.warn('Supabase upsert note:', error.message);
+      }
     } else {
       console.log('Successfully saved attempt to Supabase database!');
     }
   } catch (err) {
-    console.error('Error connecting to Supabase:', err);
+    console.info('Supabase connection note (using local storage fallback):', err);
   }
 }
 

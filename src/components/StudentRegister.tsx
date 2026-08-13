@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { StudentInfo } from '../types';
 import { getAttempt, getAttemptAsync, StoredAttempt } from '../utils/examStorage';
-import { Database, BookOpen, CheckCircle, Clock, Award, Shield, AlertCircle, ArrowRight, Sparkles, Shuffle, Lock, Eye } from 'lucide-react';
+import { SupabaseSetupModal } from './SupabaseSetupModal';
+import { Database, BookOpen, CheckCircle, Clock, Award, Shield, AlertCircle, ArrowRight, Sparkles, Shuffle, Lock, Eye, Code } from 'lucide-react';
 
 interface StudentRegisterProps {
   onStartExam: (info: StudentInfo) => void;
@@ -17,6 +18,7 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
   const [error, setError] = useState('');
   const [existingAttempt, setExistingAttempt] = useState<StoredAttempt | null>(null);
   const [isCheckingDb, setIsCheckingDb] = useState<boolean>(false);
+  const [isSqlModalOpen, setIsSqlModalOpen] = useState<boolean>(false);
 
   // Check if roll number or email has already completed the test in local storage or Supabase DB
   useEffect(() => {
@@ -137,9 +139,19 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
           </div>
 
           <div className="border-t border-white/10 pt-4 text-xs text-slate-400 space-y-2">
-            <div className="flex items-center gap-2">
-              <Database className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span className="text-emerald-300 font-semibold">Supabase Connected (Project: ejolboeirdtqcsuikayf)</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Database className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="text-emerald-300 font-semibold">Supabase Connected</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSqlModalOpen(true)}
+                className="px-2.5 py-1 bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 text-indigo-300 rounded-lg font-mono text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer"
+              >
+                <Code className="w-3 h-3" />
+                <span>SQL Setup</span>
+              </button>
             </div>
             <div className="flex items-center gap-2">
               <Lock className="w-4 h-4 text-amber-400 shrink-0" />
@@ -265,6 +277,12 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
           </p>
         </div>
       </div>
+
+      {/* Supabase SQL Setup Modal */}
+      <SupabaseSetupModal
+        isOpen={isSqlModalOpen}
+        onClose={() => setIsSqlModalOpen(false)}
+      />
     </div>
   );
 };
