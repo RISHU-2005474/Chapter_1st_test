@@ -44,7 +44,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         </div>
 
         <p className="text-sm text-slate-300 leading-relaxed">
-          Are you sure you want to finalize and submit your O Level Chapter 1 examination? Once submitted, you cannot change your answers.
+          Are you sure you want to finalize and submit your <strong>Rishu_Sir_Test_Series</strong> (O Level Chapter 1) examination? Once submitted, you cannot change your answers.
         </p>
 
         {/* Exam Breakdown Card */}

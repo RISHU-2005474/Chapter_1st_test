@@ -3,6 +3,7 @@ import { StudentInfo } from '../types';
 import { getAttempt, getAttemptAsync, StoredAttempt } from '../utils/examStorage';
 import { SupabaseSetupModal } from './SupabaseSetupModal';
 import { Database, BookOpen, CheckCircle, Clock, Award, Shield, AlertCircle, ArrowRight, Sparkles, Shuffle, Lock, Eye, Code } from 'lucide-react';
+import logoImg from '../assets/images/rishu_sir_logo_1786638561837.jpg';
 
 interface StudentRegisterProps {
   onStartExam: (info: StudentInfo) => void;
@@ -82,16 +83,26 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
           <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl pointer-events-none" />
 
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full text-indigo-300 text-xs font-semibold mb-6">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-              National Institute Examination Portal
+            <div className="flex items-center gap-3 mb-6">
+              <div className="relative w-12 h-12 rounded-2xl overflow-hidden border border-amber-500/40 shadow-xl shadow-indigo-500/30 shrink-0">
+                <img
+                  src={logoImg}
+                  alt="Rishu Sir Test Series Logo"
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full text-indigo-300 text-xs font-semibold">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                Official Examination Portal
+              </div>
             </div>
 
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight mb-3">
-              O Level Computer Course
+              Rishu_Sir_Test_Series
             </h2>
-            <p className="text-sm text-slate-300 font-medium mb-6">
-              Module 1 (M1-R5 / M1.1-R5) — Chapter 1: Introduction to Computer
+            <p className="text-sm text-indigo-200 font-medium mb-6">
+              O Level Computer Course (M1-R5) — Chapter 1: Introduction to Computer
             </p>
 
             {/* Quick Metrics */}

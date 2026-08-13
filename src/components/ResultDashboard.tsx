@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { Question, StudentInfo, ExamResultStats } from '../types';
+import logoImg from '../assets/images/rishu_sir_logo_1786638561837.jpg';
 import {
   Trophy,
   Award,
@@ -120,13 +121,13 @@ export const ResultDashboard: React.FC<ResultDashboardProps> = ({
           <div className="flex flex-col items-center md:items-start gap-4 max-w-2xl">
             {stats.passed ? (
               <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 rounded-full text-xs font-bold uppercase tracking-wider">
-                <Sparkles className="w-4 h-4 text-emerald-400" />
-                EXAM PASSED WITH FLYING COLORS
+                <img src={logoImg} alt="Logo" className="w-4 h-4 rounded-full object-cover" referrerPolicy="no-referrer" />
+                RISHU_SIR_TEST_SERIES — EXAM PASSED
               </div>
             ) : (
               <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-red-500/20 border border-red-500/40 text-red-300 rounded-full text-xs font-bold uppercase tracking-wider">
-                <AlertCircle className="w-4 h-4 text-red-400" />
-                ATTEMPT COMPLETED — REQUIRES IMPROVEMENT
+                <img src={logoImg} alt="Logo" className="w-4 h-4 rounded-full object-cover" referrerPolicy="no-referrer" />
+                RISHU_SIR_TEST_SERIES — ATTEMPT COMPLETED
               </div>
             )}
 
@@ -138,7 +139,7 @@ export const ResultDashboard: React.FC<ResultDashboardProps> = ({
 
             <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
               {stats.passed
-                ? `You have successfully cleared the O Level Module 1 (M1-R5) Chapter 1: Introduction to Computer Examination with a score of ${stats.score}/100 (${stats.percentage}%). Great achievement!`
+                ? `You have successfully cleared the Rishu_Sir_Test_Series O Level Module 1 (M1-R5) Chapter 1: Introduction to Computer Examination with a score of ${stats.score}/100 (${stats.percentage}%). Great achievement!`
                 : `You scored ${stats.score}/100 (${stats.percentage}%). The minimum passing threshold is 50 Marks. Don't be discouraged! Review your detailed answers below and retake the exam.`}
             </p>
 

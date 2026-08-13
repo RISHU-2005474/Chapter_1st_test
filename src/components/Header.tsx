@@ -1,6 +1,7 @@
 import React from 'react';
 import { Clock, ShieldAlert, User, Award, FileText } from 'lucide-react';
 import { StudentInfo } from '../types';
+import logoImg from '../assets/images/rishu_sir_logo_1786638561837.jpg';
 
 interface HeaderProps {
   student: StudentInfo | null;
@@ -35,16 +36,21 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="sticky top-0 z-40 h-16 border-b border-white/10 backdrop-blur-md bg-slate-900/80 px-4 sm:px-8 flex items-center justify-between shadow-lg">
       {/* Left branding */}
       <div className="flex items-center gap-3 sm:gap-4">
-        <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center font-extrabold text-xl text-white shadow-md shadow-indigo-500/20">
-          O
+        <div className="relative w-10 h-10 rounded-xl overflow-hidden border border-amber-500/40 shadow-lg shadow-indigo-500/20 shrink-0">
+          <img
+            src={logoImg}
+            alt="Rishu Sir Test Series Logo"
+            className="w-full h-full object-cover"
+            referrerPolicy="no-referrer"
+          />
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-sm font-bold uppercase tracking-wider text-indigo-400">
-              O Level: Module 1 (M1-R5)
+            <h1 className="text-sm font-extrabold tracking-wide text-amber-400 uppercase">
+              Rishu_Sir_Test_Series
             </h1>
             <span className="hidden md:inline-block px-2 py-0.5 text-[10px] bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 rounded font-mono">
-              100 Marks
+              O Level M1-R5
             </span>
           </div>
           <p className="text-xs text-slate-400 font-medium">
