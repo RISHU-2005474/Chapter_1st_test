@@ -16,17 +16,12 @@ import {
   Award,
   HelpCircle,
   Lock,
-  Unlock,
-  ShieldAlert,
-  AlertTriangle,
-  X,
   Megaphone,
 } from 'lucide-react';
 
 interface ChapterSelectionProps {
   controls: ChapterControlMap;
   onSelectChapter: (chapter: Chapter) => void;
-  onOpenOwnerControl: () => void;
 }
 
 const ICON_MAP = {
@@ -40,7 +35,6 @@ const ICON_MAP = {
 export const ChapterSelection: React.FC<ChapterSelectionProps> = ({
   controls,
   onSelectChapter,
-  onOpenOwnerControl,
 }) => {
   const [lockedModalChapter, setLockedModalChapter] = useState<{ chapter: Chapter; notice?: string } | null>(null);
 
@@ -63,20 +57,9 @@ export const ChapterSelection: React.FC<ChapterSelectionProps> = ({
 
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="space-y-4 max-w-2xl text-center md:text-left">
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-              <div className="inline-flex items-center gap-2.5 px-4 py-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-full text-xs font-bold uppercase tracking-wider">
-                <Sparkles className="w-4 h-4 text-amber-400" />
-                <span>O Level (M1-R5) Standardized Chapter Test Series</span>
-              </div>
-
-              <button
-                type="button"
-                onClick={onOpenOwnerControl}
-                className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/40 text-indigo-300 rounded-full text-xs font-bold transition-all cursor-pointer shadow-sm"
-              >
-                <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
-                <span>Owner Test Control Panel</span>
-              </button>
+            <div className="inline-flex items-center gap-2.5 px-4 py-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-full text-xs font-bold uppercase tracking-wider">
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              <span>O Level (M1-R5) Standardized Chapter Test Series</span>
             </div>
 
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight leading-tight">
@@ -131,19 +114,9 @@ export const ChapterSelection: React.FC<ChapterSelectionProps> = ({
               </span>
             </h2>
             <p className="text-xs text-slate-400 mt-1">
-              Click on any chapter below to load its 100-question exam portal. Test access is controlled by the Owner.
+              Click on any active chapter below to load its 100-question exam portal.
             </p>
           </div>
-
-          {/* Owner Quick Access Link */}
-          <button
-            type="button"
-            onClick={onOpenOwnerControl}
-            className="self-start sm:self-auto px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-amber-500/30 text-amber-300 hover:text-amber-200 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-sm"
-          >
-            <ShieldAlert className="w-4 h-4 text-amber-400" />
-            <span>Admin (Owner) Controls</span>
-          </button>
         </div>
 
         {/* 5 Chapter Cards Grid */}
@@ -257,7 +230,7 @@ export const ChapterSelection: React.FC<ChapterSelectionProps> = ({
                       className="w-full py-3 px-4 bg-slate-800 hover:bg-slate-700 text-rose-300 font-extrabold rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all border border-rose-500/30 cursor-pointer"
                     >
                       <Lock className="w-4 h-4 text-rose-400" />
-                      <span>Test Locked by Owner</span>
+                      <span>Test Locked</span>
                     </button>
                   )}
                 </div>
@@ -273,7 +246,7 @@ export const ChapterSelection: React.FC<ChapterSelectionProps> = ({
           Certified Rishu_Sir_Test_Series • O Level Computer Science (M1-R5) Syllabus
         </p>
         <p className="text-[11px] text-slate-500">
-          All 5 chapter tests adhere strictly to the National Institute Computer Course curriculum. Test availability is managed by the examination owner.
+          All 5 chapter tests adhere strictly to the National Institute Computer Course curriculum. Test availability is managed on the cloud backend.
         </p>
       </div>
 
@@ -287,41 +260,30 @@ export const ChapterSelection: React.FC<ChapterSelectionProps> = ({
 
             <div className="space-y-2">
               <h3 className="text-xl font-black text-white">
-                Chapter Test Currently Closed!
+                Chapter Test Currently Closed
               </h3>
               <p className="text-sm font-bold text-amber-300">
                 {lockedModalChapter.chapter.title} ({lockedModalChapter.chapter.code})
               </p>
               <p className="text-xs text-slate-300 leading-relaxed pt-1">
-                Yeh test abhi <strong>Owner (Rishu Sir)</strong> dwara band (Locked) kiya gaya hai. Jab Rishu Sir is test ko chalu (Open) karenge, tabhi aap is chapter ka test de sakte hain.
+                Yeh test abhi backend par <strong>Locked (Band)</strong> hai. Jab Rishu Sir is test ko chalu (Open) karenge, tabhi aap is chapter ka test de sakte hain.
               </p>
             </div>
 
             {lockedModalChapter.notice && (
               <div className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-2xl text-xs flex items-center gap-2 text-left">
                 <Megaphone className="w-4 h-4 text-amber-400 shrink-0" />
-                <span><strong>Special Notice from Owner:</strong> {lockedModalChapter.notice}</span>
+                <span><strong>Special Notice:</strong> {lockedModalChapter.notice}</span>
               </div>
             )}
 
-            <div className="pt-2 flex flex-col gap-2">
+            <div className="pt-2">
               <button
                 type="button"
                 onClick={() => setLockedModalChapter(null)}
                 className="w-full py-3 bg-white/10 hover:bg-white/15 text-white font-bold rounded-xl text-xs transition-all cursor-pointer"
               >
                 Theek Hai / Close
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setLockedModalChapter(null);
-                  onOpenOwnerControl();
-                }}
-                className="text-[11px] text-amber-400/80 hover:text-amber-300 font-semibold cursor-pointer underline py-1"
-              >
-                Are you Rishu Sir? Open Owner Panel to Unlock
               </button>
             </div>
           </div>

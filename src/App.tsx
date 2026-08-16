@@ -16,7 +16,6 @@ import { QuestionPalette } from './components/QuestionPalette';
 import { ResultDashboard } from './components/ResultDashboard';
 import { ConfirmationModal } from './components/ConfirmationModal';
 import { TimeoutModal } from './components/TimeoutModal';
-import { OwnerControlModal } from './components/OwnerControlModal';
 import { shuffleQuestionsForUser } from './utils/shuffle';
 import { saveAttempt, StoredAttempt } from './utils/examStorage';
 import { fetchChapterControls } from './utils/chapterControls';
@@ -42,37 +41,34 @@ export default function App() {
   const [isTimeoutModalOpen, setIsTimeoutModalOpen] = useState<boolean>(false);
   const [timeSpent, setTimeSpent] = useState<number>(0);
 
-  // Owner Chapter Controls State
+  // Backend Chapter Controls State (Loaded directly from Supabase backend database)
   const [chapterControls, setChapterControls] = useState<ChapterControlMap>(() => {
-    // Initial local read (fast)
     const initial: ChapterControlMap = {};
     CHAPTERS.forEach((c) => {
       initial[c.id] = { id: c.id, isOpen: true };
     });
     try {
-      const stored = localStorage.getItem('rishu_sir_chapter_controls_v1');
+      const stored = localStorage.getItem('rishu_sir_chapter_controls_v2');
       if (stored) {
         return { ...initial, ...JSON.parse(stored) };
       }
     } catch {
-      // fallback to initial
+      // fallback
     }
     return initial;
   });
-  const [isOwnerModalOpen, setIsOwnerModalOpen] = useState<boolean>(false);
 
-  // Sync chapter controls with Supabase / storage on startup
-  useEffect(() => {
-    let isMounted = true;
-    fetchChapterControls().then((remoteControls) => {
-      if (isMounted && remoteControls && Object.keys(remoteControls).length > 0) {
-        setChapterControls(remoteControls);
-      }
-    });
-    return () => {
-      isMounted = false;
-    };
+  // Sync chapter controls directly with Supabase backend on startup
+  const syncWithBackend = useCallback(async () => {
+    const remoteControls = await fetchChapterControls();
+    if (remoteControls && Object.keys(remoteControls).length > 0) {
+      setChapterControls(remoteControls);
+    }
   }, []);
+
+  useEffect(() => {
+    syncWithBackend();
+  }, [syncWithBackend]);
 
   // Chapter selection handler
   const handleSelectChapter = (chapter: Chapter) => {
@@ -81,10 +77,13 @@ export default function App() {
     setChapterQuestions(qList);
     setActiveQuestions(qList);
     setExamStatus('registration');
+    // Refresh backend status
+    syncWithBackend();
   };
 
   // Return to chapter selection
   const handleChangeChapter = () => {
+    syncWithBackend();
     setExamStatus('chapter_selection');
   };
 
@@ -215,11 +214,13 @@ export default function App() {
   }, [examStatus, handleTimeoutSubmit]);
 
   // Start exam trigger - shuffles questions specifically for the candidate's email
-  const handleStartExam = (info: StudentInfo) => {
-    // Gatekeeper: verify chapter is open
-    const currentControl = chapterControls[selectedChapter.id];
+  const handleStartExam = async (info: StudentInfo) => {
+    // Gatekeeper: verify live backend status from Supabase
+    const latestControls = await fetchChapterControls();
+    const currentControl = latestControls[selectedChapter.id] || chapterControls[selectedChapter.id];
     if (currentControl && !currentControl.isOpen) {
-      alert(`Test for ${selectedChapter.title} is currently closed by the Owner (Rishu Sir).`);
+      alert(`Yeh test abhi Administrator (Rishu Sir) dwara start nahi hua hai.`);
+      setChapterControls(latestControls);
       return;
     }
 
@@ -329,7 +330,6 @@ export default function App() {
         examStarted={examStatus === 'ongoing'}
         examSubmitted={examStatus === 'submitted'}
         onChangeChapter={handleChangeChapter}
-        onOpenOwnerControl={() => setIsOwnerModalOpen(true)}
       />
 
       {/* Main Container Viewport */}
@@ -339,7 +339,6 @@ export default function App() {
           <ChapterSelection
             controls={chapterControls}
             onSelectChapter={handleSelectChapter}
-            onOpenOwnerControl={() => setIsOwnerModalOpen(true)}
           />
         )}
 
@@ -416,14 +415,6 @@ export default function App() {
       <TimeoutModal
         isOpen={isTimeoutModalOpen}
         onViewResults={() => setIsTimeoutModalOpen(false)}
-      />
-
-      {/* Owner (Rishu Sir) Test Availability Control Modal */}
-      <OwnerControlModal
-        isOpen={isOwnerModalOpen}
-        controls={chapterControls}
-        onClose={() => setIsOwnerModalOpen(false)}
-        onControlsUpdated={(updated) => setChapterControls(updated)}
       />
     </div>
   );

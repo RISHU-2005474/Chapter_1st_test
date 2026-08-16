@@ -13,7 +13,6 @@ interface HeaderProps {
   examStarted: boolean;
   examSubmitted: boolean;
   onChangeChapter?: () => void;
-  onOpenOwnerControl?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -26,7 +25,6 @@ export const Header: React.FC<HeaderProps> = ({
   examStarted,
   examSubmitted,
   onChangeChapter,
-  onOpenOwnerControl,
 }) => {
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -70,26 +68,13 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Middle/Right: Student Info & Live Timer */}
-      <div className="flex items-center gap-2 sm:gap-4">
-        {/* Owner / Admin Control Trigger Button */}
-        {!examStarted && onOpenOwnerControl && (
-          <button
-            type="button"
-            onClick={onOpenOwnerControl}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 hover:text-amber-200 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
-            title="Owner Control Panel (Rishu Sir)"
-          >
-            <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden sm:inline">Owner Panel</span>
-          </button>
-        )}
-
+      <div className="flex items-center gap-3 sm:gap-4">
         {/* Change Chapter button (when not mid-exam) */}
         {!examStarted && onChangeChapter && (
           <button
             type="button"
             onClick={onChangeChapter}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/15 border border-white/10 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/15 border border-white/10 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
           >
             <Grid className="w-3.5 h-3.5 text-amber-400" />
             <span>All Chapters</span>
