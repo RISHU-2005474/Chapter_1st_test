@@ -3,13 +3,16 @@ import { supabase } from '../lib/supabase';
 
 export interface StoredAttempt {
   student: StudentInfo;
+  chapterId?: string;
+  chapterTitle?: string;
+  chapterCode?: string;
   userAnswers: (number | null)[];
   shuffledQuestions: Question[];
   stats: ExamResultStats;
   submittedAt: string;
 }
 
-const STORAGE_KEY = 'olevel_m1_exam_attempts_v1';
+const STORAGE_KEY = 'olevel_m1_exam_attempts_v2';
 
 function getStorageMap(): Record<string, StoredAttempt> {
   try {
@@ -22,19 +25,37 @@ function getStorageMap(): Record<string, StoredAttempt> {
   }
 }
 
-export function getAttempt(emailOrRoll: string): StoredAttempt | null {
-  if (!emailOrRoll) return null;
-  const key = emailOrRoll.trim().toLowerCase();
-  const map = getStorageMap();
-  return map[key] || null;
+export function makeAttemptKey(emailOrRoll: string, chapterId?: string): string {
+  const cleanEmail = emailOrRoll.trim().toLowerCase();
+  if (!chapterId) return cleanEmail;
+  return `${cleanEmail}::${chapterId}`;
 }
 
-export async function getAttemptAsync(emailOrRoll: string): Promise<StoredAttempt | null> {
+export function getAttempt(emailOrRoll: string, chapterId?: string): StoredAttempt | null {
   if (!emailOrRoll) return null;
-  const key = emailOrRoll.trim().toLowerCase();
-  
+  const cleanEmail = emailOrRoll.trim().toLowerCase();
+  const map = getStorageMap();
+
+  if (chapterId) {
+    const chapterKey = makeAttemptKey(cleanEmail, chapterId);
+    if (map[chapterKey]) return map[chapterKey];
+    // Check fallback for old key
+    if (map[cleanEmail] && (!map[cleanEmail].chapterId || map[cleanEmail].chapterId === chapterId)) {
+      return map[cleanEmail];
+    }
+    return null;
+  }
+
+  return map[cleanEmail] || null;
+}
+
+export async function getAttemptAsync(emailOrRoll: string, chapterId?: string): Promise<StoredAttempt | null> {
+  if (!emailOrRoll) return null;
+  const cleanEmail = emailOrRoll.trim().toLowerCase();
+  const dbKey = makeAttemptKey(cleanEmail, chapterId);
+
   // 1. Check local cache first
-  const local = getAttempt(key);
+  const local = getAttempt(cleanEmail, chapterId);
   if (local) return local;
 
   // 2. Fetch from Supabase as fallback
@@ -42,12 +63,15 @@ export async function getAttemptAsync(emailOrRoll: string): Promise<StoredAttemp
     const { data, error } = await supabase
       .from('exam_attempts')
       .select('*')
-      .eq('email_roll', key)
+      .eq('email_roll', dbKey)
       .maybeSingle();
 
     if (!error && data) {
       const attempt: StoredAttempt = {
-        student: { name: data.student_name, rollNumber: data.email_roll },
+        student: { name: data.student_name, rollNumber: cleanEmail },
+        chapterId: data.chapter_id || chapterId,
+        chapterTitle: data.chapter_title,
+        chapterCode: data.chapter_code,
         userAnswers: data.user_answers || [],
         shuffledQuestions: data.shuffled_questions || [],
         stats: data.stats || {
@@ -66,7 +90,7 @@ export async function getAttemptAsync(emailOrRoll: string): Promise<StoredAttemp
 
       // Save into local storage for quick access
       const map = getStorageMap();
-      map[key] = attempt;
+      map[dbKey] = attempt;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
 
       return attempt;
@@ -78,12 +102,20 @@ export async function getAttemptAsync(emailOrRoll: string): Promise<StoredAttemp
   return null;
 }
 
-export async function saveAttempt(attempt: StoredAttempt): Promise<void> {
+export async function saveAttempt(attempt: StoredAttempt, chapterId?: string): Promise<void> {
+  const activeChapterId = attempt.chapterId || chapterId || 'ch1_intro';
+  const cleanEmail = attempt.student.rollNumber.trim().toLowerCase();
+  const dbKey = makeAttemptKey(cleanEmail, activeChapterId);
+
+  const enrichedAttempt: StoredAttempt = {
+    ...attempt,
+    chapterId: activeChapterId,
+  };
+
   // 1. Save locally
-  const key = attempt.student.rollNumber.trim().toLowerCase();
   try {
     const map = getStorageMap();
-    map[key] = attempt;
+    map[dbKey] = enrichedAttempt;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
   } catch (e) {
     console.error('Failed to save attempt to localStorage', e);
@@ -92,8 +124,11 @@ export async function saveAttempt(attempt: StoredAttempt): Promise<void> {
   // 2. Save to Supabase DB table `exam_attempts`
   try {
     const payload = {
-      email_roll: key,
+      email_roll: dbKey,
       student_name: attempt.student.name,
+      chapter_id: activeChapterId,
+      chapter_title: attempt.chapterTitle || '',
+      chapter_code: attempt.chapterCode || '',
       score: attempt.stats.score,
       total_questions: attempt.stats.totalQuestions,
       percentage: attempt.stats.percentage,

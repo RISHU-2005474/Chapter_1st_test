@@ -43,3 +43,12 @@ export interface ExamResultStats {
   grade: 'S' | 'A' | 'B' | 'C' | 'D' | 'F';
 }
 
+export interface ChapterControlState {
+  id: number;
+  isOpen: boolean;
+  announcement?: string;
+  updatedAt?: string;
+}
+
+export type ChapterControlMap = Record<number, ChapterControlState>;
+

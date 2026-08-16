@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
-import { Question, StudentInfo, ExamResultStats } from '../types';
+import { Question, StudentInfo, ExamResultStats, Chapter } from '../types';
 import logoImg from '../assets/images/rishu_sir_logo_1786638561837.jpg';
 import {
   Trophy,
@@ -24,6 +24,7 @@ import {
 
 interface ResultDashboardProps {
   student: StudentInfo;
+  selectedChapter?: Chapter;
   questions: Question[];
   userAnswers: (number | null)[];
   stats: ExamResultStats;
@@ -32,6 +33,7 @@ interface ResultDashboardProps {
 
 export const ResultDashboard: React.FC<ResultDashboardProps> = ({
   student,
+  selectedChapter,
   questions,
   userAnswers,
   stats,
@@ -139,7 +141,7 @@ export const ResultDashboard: React.FC<ResultDashboardProps> = ({
 
             <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
               {stats.passed
-                ? `You have successfully cleared the Rishu_Sir_Test_Series O Level Module 1 (M1-R5) Chapter 1: Introduction to Computer Examination with a score of ${stats.score}/100 (${stats.percentage}%). Great achievement!`
+                ? `You have successfully cleared the Rishu_Sir_Test_Series O Level Module 1 (M1-R5) ${selectedChapter ? selectedChapter.title : 'Chapter Test'} Examination with a score of ${stats.score}/100 (${stats.percentage}%). Great achievement!`
                 : `You scored ${stats.score}/100 (${stats.percentage}%). The minimum passing threshold is 50 Marks. Don't be discouraged! Review your detailed answers below and retake the exam.`}
             </p>
 

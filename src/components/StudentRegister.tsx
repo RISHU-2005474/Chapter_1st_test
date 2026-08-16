@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { StudentInfo, Chapter } from '../types';
+import { StudentInfo, Chapter, ChapterControlState } from '../types';
 import { getAttempt, getAttemptAsync, StoredAttempt } from '../utils/examStorage';
 import { SupabaseSetupModal } from './SupabaseSetupModal';
-import { Database, BookOpen, CheckCircle, Clock, Award, Shield, AlertCircle, ArrowRight, Sparkles, Shuffle, Lock, Eye, Code, Grid } from 'lucide-react';
+import { Database, BookOpen, CheckCircle, Clock, Award, Shield, AlertCircle, ArrowRight, Sparkles, Shuffle, Lock, Eye, Code, Grid, Megaphone } from 'lucide-react';
 import logoImg from '../assets/images/rishu_sir_logo_1786638561837.jpg';
 
 interface StudentRegisterProps {
   selectedChapter: Chapter;
+  chapterControl?: ChapterControlState;
   onStartExam: (info: StudentInfo) => void;
   onViewPastAttempt: (attempt: StoredAttempt) => void;
   onChangeChapter?: () => void;
@@ -14,6 +15,7 @@ interface StudentRegisterProps {
 
 export const StudentRegister: React.FC<StudentRegisterProps> = ({
   selectedChapter,
+  chapterControl,
   onStartExam,
   onViewPastAttempt,
   onChangeChapter,
@@ -25,23 +27,25 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
   const [isCheckingDb, setIsCheckingDb] = useState<boolean>(false);
   const [isSqlModalOpen, setIsSqlModalOpen] = useState<boolean>(false);
 
-  // Check if roll number or email has already completed the test in local storage or Supabase DB
+  const isChapterLocked = chapterControl ? !chapterControl.isOpen : false;
+
+  // Check if roll number or email has already completed the test for THIS chapter
   useEffect(() => {
     let isMounted = true;
     if (rollNumber.trim()) {
-      const pastLocal = getAttempt(rollNumber.trim());
+      const pastLocal = getAttempt(rollNumber.trim(), selectedChapter.id);
       setExistingAttempt(pastLocal);
       if (pastLocal) {
-        setError(`This Email / Roll Number (${pastLocal.student.rollNumber}) has already submitted the exam.`);
+        setError(`This Email / Roll Number (${pastLocal.student.rollNumber}) has already submitted the test for ${selectedChapter.title}.`);
       } else {
         setError('');
         setIsCheckingDb(true);
-        getAttemptAsync(rollNumber.trim()).then((pastRemote) => {
+        getAttemptAsync(rollNumber.trim(), selectedChapter.id).then((pastRemote) => {
           if (!isMounted) return;
           setIsCheckingDb(false);
           if (pastRemote) {
             setExistingAttempt(pastRemote);
-            setError(`This Email / Roll Number (${pastRemote.student.rollNumber}) has already submitted the exam.`);
+            setError(`This Email / Roll Number (${pastRemote.student.rollNumber}) has already submitted the test for ${selectedChapter.title}.`);
           }
         });
       }
@@ -53,7 +57,7 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [rollNumber]);
+  }, [rollNumber, selectedChapter.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,11 +70,16 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
       return;
     }
 
+    if (isChapterLocked) {
+      setError(`This Chapter Test (${selectedChapter.title}) is currently closed by the Administrator (Rishu Sir).`);
+      return;
+    }
+
     // Double check with Supabase before starting
-    const past = (await getAttemptAsync(rollNumber.trim())) || getAttempt(rollNumber.trim());
+    const past = (await getAttemptAsync(rollNumber.trim(), selectedChapter.id)) || getAttempt(rollNumber.trim(), selectedChapter.id);
     if (past) {
       setExistingAttempt(past);
-      setError('You have already submitted this exam with this Email / Roll Number. Re-attempting is not allowed!');
+      setError(`You have already submitted ${selectedChapter.title} with this Email / Roll Number. Re-attempting the same chapter is not allowed!`);
       return;
     }
 
@@ -188,7 +197,7 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
             </div>
             <div className="flex items-center gap-2">
               <Lock className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>Single Attempt Enforced per Email ID</span>
+              <span>Single Attempt Enforced per Chapter for each Email ID</span>
             </div>
             <div className="flex items-center gap-2">
               <Shuffle className="w-4 h-4 text-indigo-400 shrink-0" />
@@ -205,12 +214,45 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
                 Candidate Registration
               </h3>
               <p className="text-sm text-slate-400">
-                Please enter your credentials to initiate the 60-minute proctored examination.
+                Please enter your credentials to initiate the 60-minute proctored examination for <strong className="text-amber-300">{selectedChapter.title}</strong>.
               </p>
             </div>
 
-            {/* Attempt Restriction Warning Banner */}
-            {existingAttempt ? (
+            {/* Attempt Restriction / Lock Warning Banner */}
+            {isChapterLocked ? (
+              <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/40 rounded-2xl space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-rose-500/20 rounded-xl text-rose-400 shrink-0 mt-0.5">
+                    <Lock className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-rose-300">
+                      Test Currently Locked by Owner!
+                    </h4>
+                    <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                      Yeh test abhi <strong>Owner (Rishu Sir)</strong> dwara band (Locked) kiya gaya hai. Jab Rishu Sir is test ko chalu (Open) karenge, tabhi test open hoga.
+                    </p>
+                    {chapterControl?.announcement && (
+                      <div className="mt-2 p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-300 text-xs flex items-center gap-2">
+                        <Megaphone className="w-4 h-4 text-amber-400 shrink-0" />
+                        <span><strong>Notice:</strong> {chapterControl.announcement}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {onChangeChapter && (
+                  <button
+                    type="button"
+                    onClick={onChangeChapter}
+                    className="w-full py-2.5 bg-white/10 hover:bg-white/15 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Grid className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Choose Another Open Chapter</span>
+                  </button>
+                )}
+              </div>
+            ) : existingAttempt ? (
               <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl space-y-3">
                 <div className="flex items-start gap-3">
                   <div className="p-2 bg-amber-500/20 rounded-xl text-amber-400 shrink-0 mt-0.5">
@@ -218,13 +260,13 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
                   </div>
                   <div>
                     <h4 className="text-sm font-bold text-amber-300">
-                      Already Submitted Paper!
+                      Chapter Test Already Submitted!
                     </h4>
                     <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                      This Email / Roll Number (<strong>{existingAttempt.student.rollNumber}</strong>) has already completed this examination under candidate name <strong>{existingAttempt.student.name}</strong> with a score of <strong>{existingAttempt.stats.score}/100 ({existingAttempt.stats.percentage}%)</strong>.
+                      This Email / Roll Number (<strong>{existingAttempt.student.rollNumber}</strong>) has already completed the examination for <strong>{selectedChapter.title}</strong> under candidate name <strong>{existingAttempt.student.name}</strong> with a score of <strong>{existingAttempt.stats.score}/100 ({existingAttempt.stats.percentage}%)</strong>.
                     </p>
                     <p className="text-[11px] text-amber-400/90 font-medium mt-1">
-                      ⚠️ Re-attempting with the same Email address is strictly prohibited.
+                      ⚠️ Re-attempting {selectedChapter.title} with the same Email is not allowed. You may still attempt other chapter tests using this Email.
                     </p>
                   </div>
                 </div>
@@ -255,7 +297,8 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
                   placeholder="e.g. Rahul Sharma"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm font-medium"
+                  disabled={isChapterLocked}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -268,7 +311,8 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
                   placeholder="e.g. student@gmail.com or OL-2026-9842"
                   value={rollNumber}
                   onChange={(e) => setRollNumber(e.target.value)}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm font-medium"
+                  disabled={isChapterLocked}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <p className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1.5">
                   <Shuffle className="w-3.5 h-3.5 text-indigo-400 inline" />
@@ -290,15 +334,23 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
 
               <button
                 type="submit"
-                disabled={!!existingAttempt}
+                disabled={!!existingAttempt || isChapterLocked}
                 className={`w-full py-4 font-bold rounded-2xl transition-all flex items-center justify-center gap-2 group text-base uppercase tracking-wider ${
-                  existingAttempt
+                  isChapterLocked
+                    ? 'bg-slate-800 text-rose-300 cursor-not-allowed border border-rose-500/30'
+                    : existingAttempt
                     ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5'
                     : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-xl shadow-indigo-600/30 cursor-pointer'
                 }`}
               >
-                <span>{existingAttempt ? 'Attempt Locked for this Email' : 'Start Test Now'}</span>
-                {!existingAttempt && (
+                <span>
+                  {isChapterLocked
+                    ? 'Test Closed by Owner'
+                    : existingAttempt
+                    ? 'Attempt Locked for this Email'
+                    : 'Start Test Now'}
+                </span>
+                {!existingAttempt && !isChapterLocked && (
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 )}
               </button>

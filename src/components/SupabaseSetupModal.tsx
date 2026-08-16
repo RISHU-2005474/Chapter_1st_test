@@ -9,10 +9,14 @@ interface SupabaseSetupModalProps {
 export const SQL_SCHEMA_SCRIPT = `-- Run this SQL script in your Supabase SQL Editor:
 -- https://supabase.com/dashboard/project/ejolboeirdtqcsuikayf/sql/new
 
+-- 1. Examination Attempts Table
 CREATE TABLE IF NOT EXISTS public.exam_attempts (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   email_roll TEXT UNIQUE NOT NULL,
   student_name TEXT NOT NULL,
+  chapter_id TEXT,
+  chapter_title TEXT,
+  chapter_code TEXT,
   score INT NOT NULL,
   total_questions INT NOT NULL,
   percentage INT NOT NULL,
@@ -28,9 +32,35 @@ CREATE TABLE IF NOT EXISTS public.exam_attempts (
 -- Enable Row Level Security (RLS)
 ALTER TABLE public.exam_attempts ENABLE ROW LEVEL SECURITY;
 
--- Allow public inserts & reads for examination attempts
 CREATE POLICY "Allow public access to exam_attempts"
 ON public.exam_attempts
+FOR ALL
+USING (true)
+WITH CHECK (true);
+
+-- 2. Owner Chapter Test Controls Table (Live / Lock Status)
+CREATE TABLE IF NOT EXISTS public.chapter_controls (
+  id INT PRIMARY KEY,
+  is_open BOOLEAN DEFAULT true,
+  announcement TEXT DEFAULT '',
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Insert initial chapter records
+INSERT INTO public.chapter_controls (id, is_open, announcement)
+VALUES
+  (1, true, ''),
+  (2, true, ''),
+  (3, true, ''),
+  (4, true, ''),
+  (5, true, '')
+ON CONFLICT (id) DO NOTHING;
+
+-- Enable Row Level Security (RLS)
+ALTER TABLE public.chapter_controls ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public access to chapter_controls"
+ON public.chapter_controls
 FOR ALL
 USING (true)
 WITH CHECK (true);

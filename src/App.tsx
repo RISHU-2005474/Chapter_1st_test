@@ -7,7 +7,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { QUESTIONS } from './data/questions';
 import { CHAPTERS } from './data/chapters';
 import { getQuestionsForChapter } from './data/chapterQuestions';
-import { StudentInfo, ExamStatus, ExamResultStats, Question, Chapter } from './types';
+import { StudentInfo, ExamStatus, ExamResultStats, Question, Chapter, ChapterControlMap } from './types';
 import { Header } from './components/Header';
 import { ChapterSelection } from './components/ChapterSelection';
 import { StudentRegister } from './components/StudentRegister';
@@ -16,8 +16,10 @@ import { QuestionPalette } from './components/QuestionPalette';
 import { ResultDashboard } from './components/ResultDashboard';
 import { ConfirmationModal } from './components/ConfirmationModal';
 import { TimeoutModal } from './components/TimeoutModal';
+import { OwnerControlModal } from './components/OwnerControlModal';
 import { shuffleQuestionsForUser } from './utils/shuffle';
 import { saveAttempt, StoredAttempt } from './utils/examStorage';
+import { fetchChapterControls } from './utils/chapterControls';
 
 const TOTAL_QUESTIONS = 100;
 const EXAM_DURATION_SECONDS = 3600; // 60 minutes = 3600 seconds
@@ -39,6 +41,38 @@ export default function App() {
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState<boolean>(false);
   const [isTimeoutModalOpen, setIsTimeoutModalOpen] = useState<boolean>(false);
   const [timeSpent, setTimeSpent] = useState<number>(0);
+
+  // Owner Chapter Controls State
+  const [chapterControls, setChapterControls] = useState<ChapterControlMap>(() => {
+    // Initial local read (fast)
+    const initial: ChapterControlMap = {};
+    CHAPTERS.forEach((c) => {
+      initial[c.id] = { id: c.id, isOpen: true };
+    });
+    try {
+      const stored = localStorage.getItem('rishu_sir_chapter_controls_v1');
+      if (stored) {
+        return { ...initial, ...JSON.parse(stored) };
+      }
+    } catch {
+      // fallback to initial
+    }
+    return initial;
+  });
+  const [isOwnerModalOpen, setIsOwnerModalOpen] = useState<boolean>(false);
+
+  // Sync chapter controls with Supabase / storage on startup
+  useEffect(() => {
+    let isMounted = true;
+    fetchChapterControls().then((remoteControls) => {
+      if (isMounted && remoteControls && Object.keys(remoteControls).length > 0) {
+        setChapterControls(remoteControls);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Chapter selection handler
   const handleSelectChapter = (chapter: Chapter) => {
@@ -138,13 +172,16 @@ export default function App() {
 
       saveAttempt({
         student: currentStudent,
+        chapterId: selectedChapter.id,
+        chapterTitle: selectedChapter.title,
+        chapterCode: selectedChapter.code,
         userAnswers: answers,
         shuffledQuestions: questions,
         stats,
         submittedAt: new Date().toISOString(),
-      });
+      }, selectedChapter.id);
     },
-    [timeSpent]
+    [timeSpent, selectedChapter]
   );
 
   // Handle auto-submit on timeout
@@ -179,6 +216,13 @@ export default function App() {
 
   // Start exam trigger - shuffles questions specifically for the candidate's email
   const handleStartExam = (info: StudentInfo) => {
+    // Gatekeeper: verify chapter is open
+    const currentControl = chapterControls[selectedChapter.id];
+    if (currentControl && !currentControl.isOpen) {
+      alert(`Test for ${selectedChapter.title} is currently closed by the Owner (Rishu Sir).`);
+      return;
+    }
+
     const shuffled = shuffleQuestionsForUser(chapterQuestions, info.rollNumber);
     setStudent(info);
     setActiveQuestions(shuffled);
@@ -285,19 +329,25 @@ export default function App() {
         examStarted={examStatus === 'ongoing'}
         examSubmitted={examStatus === 'submitted'}
         onChangeChapter={handleChangeChapter}
+        onOpenOwnerControl={() => setIsOwnerModalOpen(true)}
       />
 
       {/* Main Container Viewport */}
       <main className="relative z-10 flex-1 flex flex-col">
         {/* VIEW 0: Landing Chapter Selection */}
         {examStatus === 'chapter_selection' && (
-          <ChapterSelection onSelectChapter={handleSelectChapter} />
+          <ChapterSelection
+            controls={chapterControls}
+            onSelectChapter={handleSelectChapter}
+            onOpenOwnerControl={() => setIsOwnerModalOpen(true)}
+          />
         )}
 
         {/* VIEW 1: Candidate Registration */}
         {examStatus === 'registration' && (
           <StudentRegister
             selectedChapter={selectedChapter}
+            chapterControl={chapterControls[selectedChapter.id]}
             onStartExam={handleStartExam}
             onViewPastAttempt={handleViewPastAttempt}
             onChangeChapter={handleChangeChapter}
@@ -342,6 +392,7 @@ export default function App() {
         {examStatus === 'submitted' && student && (
           <ResultDashboard
             student={student}
+            selectedChapter={selectedChapter}
             questions={activeQuestions}
             userAnswers={userAnswers}
             stats={calculateResults()}
@@ -366,8 +417,14 @@ export default function App() {
         isOpen={isTimeoutModalOpen}
         onViewResults={() => setIsTimeoutModalOpen(false)}
       />
+
+      {/* Owner (Rishu Sir) Test Availability Control Modal */}
+      <OwnerControlModal
+        isOpen={isOwnerModalOpen}
+        controls={chapterControls}
+        onClose={() => setIsOwnerModalOpen(false)}
+        onControlsUpdated={(updated) => setChapterControls(updated)}
+      />
     </div>
   );
 }
-
-
