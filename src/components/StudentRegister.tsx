@@ -20,30 +20,28 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
   onChangeChapter,
 }) => {
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [rollNumber, setRollNumber] = useState('');
   const [error, setError] = useState('');
   const [existingAttempt, setExistingAttempt] = useState<StoredAttempt | null>(null);
 
   const isChapterLocked = chapterControl ? !chapterControl.isOpen : false;
 
-  // Check if email has already completed the test for THIS chapter
+  // Check if candidate roll number has already completed the test for THIS chapter
   useEffect(() => {
     let isMounted = true;
-    const identifier = email.trim() || rollNumber.trim();
+    const identifier = rollNumber.trim();
     if (identifier) {
       const pastLocal = getAttempt(identifier, selectedChapter.id);
       setExistingAttempt(pastLocal);
       if (pastLocal) {
-        setError(`This Email / Roll Number (${pastLocal.student.email || pastLocal.student.rollNumber}) has already submitted the test for ${selectedChapter.title}.`);
+        setError(`This Roll Number / Student ID (${pastLocal.student.rollNumber}) has already submitted the test for ${selectedChapter.title}.`);
       } else {
         setError('');
         getAttemptAsync(identifier, selectedChapter.id).then((pastRemote) => {
           if (!isMounted) return;
           if (pastRemote) {
             setExistingAttempt(pastRemote);
-            setError(`This Email / Roll Number (${pastRemote.student.email || pastRemote.student.rollNumber}) has already submitted the test for ${selectedChapter.title}.`);
+            setError(`This Roll Number / Student ID (${pastRemote.student.rollNumber}) has already submitted the test for ${selectedChapter.title}.`);
           }
         });
       }
@@ -54,7 +52,7 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [email, rollNumber, selectedChapter.id, selectedChapter.title]);
+  }, [rollNumber, selectedChapter.id, selectedChapter.title]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,21 +60,8 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
       setError('Please enter candidate full name.');
       return;
     }
-    if (!email.trim()) {
-      setError('Please enter candidate email address.');
-      return;
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      setError('Please enter a valid email address (e.g. student@gmail.com).');
-      return;
-    }
-    if (!phone.trim()) {
-      setError('Please enter candidate mobile / WhatsApp number.');
-      return;
-    }
-    if (phone.trim().length < 10) {
-      setError('Please enter a valid 10-digit mobile number.');
+    if (!rollNumber.trim()) {
+      setError('Please enter candidate Roll Number / Student ID.');
       return;
     }
 
@@ -85,22 +70,20 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
       return;
     }
 
-    const cleanEmail = email.trim().toLowerCase();
-    const cleanRoll = rollNumber.trim() || `OL-${cleanEmail.slice(0, 4).toUpperCase()}-${phone.slice(-4)}`;
+    const cleanRoll = rollNumber.trim();
 
     // Double check with Supabase before starting
-    const past = (await getAttemptAsync(cleanEmail, selectedChapter.id)) || getAttempt(cleanEmail, selectedChapter.id);
+    const past = (await getAttemptAsync(cleanRoll, selectedChapter.id)) || getAttempt(cleanRoll, selectedChapter.id);
     if (past) {
       setExistingAttempt(past);
-      setError(`You have already submitted ${selectedChapter.title} with this Email. Re-attempting the same chapter is not allowed!`);
+      setError(`You have already submitted ${selectedChapter.title} with this Roll Number. Re-attempting the same chapter is not allowed!`);
       return;
     }
 
     const studentInfo: StudentInfo = {
       name: name.trim(),
-      email: cleanEmail,
-      phone: phone.trim(),
       rollNumber: cleanRoll,
+      email: cleanRoll.includes('@') ? cleanRoll.toLowerCase() : undefined,
     };
 
     // Log registration immediately in Supabase backend
@@ -300,7 +283,7 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
                   <User className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Full Name <span className="text-red-400">*</span></span>
+                  <span>Candidate Full Name <span className="text-red-400">*</span></span>
                 </label>
                 <input
                   type="text"
@@ -312,54 +295,20 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
                 />
               </div>
 
-              {/* Candidate Email */}
+              {/* Roll Number / Student ID */}
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
-                  <Mail className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Email Address <span className="text-red-400">*</span></span>
+                  <Hash className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Roll Number / Student ID <span className="text-red-400">*</span></span>
                 </label>
                 <input
-                  type="email"
-                  placeholder="e.g. student@gmail.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  type="text"
+                  placeholder="e.g. OL-2026-001 or Email"
+                  value={rollNumber}
+                  onChange={(e) => setRollNumber(e.target.value)}
                   disabled={isChapterLocked}
-                  className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed font-mono"
                 />
-              </div>
-
-              {/* Grid: Mobile Number + Roll Number */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
-                    <Phone className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>Mobile / WhatsApp <span className="text-red-400">*</span></span>
-                  </label>
-                  <input
-                    type="tel"
-                    placeholder="e.g. 9876543210"
-                    maxLength={15}
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/[^\d+]/g, ''))}
-                    disabled={isChapterLocked}
-                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
-                    <Hash className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Roll / Student ID <span className="text-slate-500 text-[10px] lowercase">(optional)</span></span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. OL-2026-01"
-                    value={rollNumber}
-                    onChange={(e) => setRollNumber(e.target.value)}
-                    disabled={isChapterLocked}
-                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed font-mono"
-                  />
-                </div>
               </div>
 
               <div className="bg-indigo-950/30 border border-indigo-500/20 rounded-2xl p-3.5 text-xs text-slate-300 space-y-1.5">
@@ -368,7 +317,7 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
                   <span>Important Instructions:</span>
                 </h4>
                 <ul className="list-disc list-inside space-y-0.5 text-slate-400 text-[11px]">
-                  <li>Only <strong>1 attempt</strong> is permitted per Candidate Email ID.</li>
+                  <li>Only <strong>1 attempt</strong> is permitted per Candidate Roll Number / ID.</li>
                   <li>Countdown timer starts immediately upon clicking <strong>Start Test Now</strong>.</li>
                 </ul>
               </div>
@@ -388,7 +337,7 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
                   {isChapterLocked
                     ? 'Test Closed'
                     : existingAttempt
-                    ? 'Attempt Locked for this Email'
+                    ? 'Attempt Locked for this ID'
                     : 'Start Test Now'}
                 </span>
                 {!existingAttempt && !isChapterLocked && (
