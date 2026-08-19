@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StudentInfo, Chapter, ChapterControlState } from '../types';
 import { getAttempt, getAttemptAsync, StoredAttempt, saveRegistrationRecord } from '../utils/examStorage';
-import { SupabaseSetupModal } from './SupabaseSetupModal';
-import { Database, BookOpen, CheckCircle, Clock, Award, Shield, AlertCircle, ArrowRight, Sparkles, Shuffle, Lock, Eye, Code, Grid, Megaphone, User, Mail, Phone, Hash } from 'lucide-react';
+import { Database, BookOpen, Clock, Award, Shield, AlertCircle, ArrowRight, Sparkles, Shuffle, Lock, Eye, Grid, Megaphone, User, Mail, Phone, Hash } from 'lucide-react';
 import logoImg from '../assets/images/rishu_sir_logo_1786638561837.jpg';
 
 interface StudentRegisterProps {
@@ -26,8 +25,6 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
   const [rollNumber, setRollNumber] = useState('');
   const [error, setError] = useState('');
   const [existingAttempt, setExistingAttempt] = useState<StoredAttempt | null>(null);
-  const [isCheckingDb, setIsCheckingDb] = useState<boolean>(false);
-  const [isSqlModalOpen, setIsSqlModalOpen] = useState<boolean>(false);
 
   const isChapterLocked = chapterControl ? !chapterControl.isOpen : false;
 
@@ -42,10 +39,8 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
         setError(`This Email / Roll Number (${pastLocal.student.email || pastLocal.student.rollNumber}) has already submitted the test for ${selectedChapter.title}.`);
       } else {
         setError('');
-        setIsCheckingDb(true);
         getAttemptAsync(identifier, selectedChapter.id).then((pastRemote) => {
           if (!isMounted) return;
-          setIsCheckingDb(false);
           if (pastRemote) {
             setExistingAttempt(pastRemote);
             setError(`This Email / Roll Number (${pastRemote.student.email || pastRemote.student.rollNumber}) has already submitted the test for ${selectedChapter.title}.`);
@@ -55,7 +50,6 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
     } else {
       setExistingAttempt(null);
       setError('');
-      setIsCheckingDb(false);
     }
     return () => {
       isMounted = false;
@@ -87,7 +81,7 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
     }
 
     if (isChapterLocked) {
-      setError(`This Chapter Test (${selectedChapter.title}) is currently closed by the Administrator (Rishu Sir).`);
+      setError(`This Chapter Test (${selectedChapter.title}) is currently closed by the Administrator.`);
       return;
     }
 
@@ -109,7 +103,7 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
       rollNumber: cleanRoll,
     };
 
-    // Log registration immediately in Supabase
+    // Log registration immediately in Supabase backend
     saveRegistrationRecord(studentInfo, selectedChapter.id, selectedChapter.title);
 
     setError('');
@@ -209,20 +203,6 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
           </div>
 
           <div className="border-t border-white/10 pt-4 text-xs text-slate-400 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Database className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span className="text-emerald-300 font-semibold">Supabase Cloud Sync</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsSqlModalOpen(true)}
-                className="px-2.5 py-1 bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 text-indigo-300 rounded-lg font-mono text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer"
-              >
-                <Code className="w-3 h-3" />
-                <span>SQL Setup</span>
-              </button>
-            </div>
             <div className="flex items-center gap-2">
               <Lock className="w-4 h-4 text-amber-400 shrink-0" />
               <span>1 Attempt per Candidate (Email & Mobile tracked)</span>
@@ -242,7 +222,7 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
                 Candidate Registration
               </h3>
               <p className="text-sm text-slate-400">
-                Please enter candidate information. All details will be securely recorded in Rishu Sir's database for certificate and performance reporting.
+                Please enter candidate details to start your examination.
               </p>
             </div>
 
@@ -255,10 +235,10 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
                   </div>
                   <div>
                     <h4 className="text-sm font-bold text-rose-300">
-                      Test Currently Locked by Owner!
+                      Test Currently Locked by Administrator
                     </h4>
                     <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                      Yeh test abhi <strong>Owner (Rishu Sir)</strong> dwara band (Locked) kiya gaya hai. Jab Rishu Sir is test ko chalu (Open) karenge, tabhi test open hoga.
+                      Yeh test abhi Administrator dwara band (Locked) kiya gaya hai.
                     </p>
                     {chapterControl?.announcement && (
                       <div className="mt-2 p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-300 text-xs flex items-center gap-2">
@@ -389,7 +369,6 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
                 </h4>
                 <ul className="list-disc list-inside space-y-0.5 text-slate-400 text-[11px]">
                   <li>Only <strong>1 attempt</strong> is permitted per Candidate Email ID.</li>
-                  <li>Your score, answers, and registration are stored in <strong>Rishu Sir's Portal Database</strong>.</li>
                   <li>Countdown timer starts immediately upon clicking <strong>Start Test Now</strong>.</li>
                 </ul>
               </div>
@@ -407,7 +386,7 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
               >
                 <span>
                   {isChapterLocked
-                    ? 'Test Closed by Owner'
+                    ? 'Test Closed'
                     : existingAttempt
                     ? 'Attempt Locked for this Email'
                     : 'Start Test Now'}
@@ -420,16 +399,10 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
           </div>
 
           <p className="text-[11px] text-center text-slate-500 mt-4 italic">
-            Certified O Level Computer Science Examination • Single Attempt & Database-Tracked Portal
+            Certified O Level Computer Science Examination • Single Attempt Portal
           </p>
         </div>
       </div>
-
-      {/* Supabase SQL Setup Modal */}
-      <SupabaseSetupModal
-        isOpen={isSqlModalOpen}
-        onClose={() => setIsSqlModalOpen(false)}
-      />
     </div>
   );
 };

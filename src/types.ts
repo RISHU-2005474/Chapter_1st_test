@@ -31,7 +31,7 @@ export interface Chapter {
   accentColor: string;
 }
 
-export type ExamStatus = 'chapter_selection' | 'registration' | 'ongoing' | 'submitted' | 'admin_dashboard';
+export type ExamStatus = 'chapter_selection' | 'registration' | 'ongoing' | 'submitted';
 
 export interface ExamResultStats {
   score: number;
