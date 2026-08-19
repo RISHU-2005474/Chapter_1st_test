@@ -88,6 +88,19 @@ export async function fetchChapterControls(): Promise<ChapterControlMap> {
 }
 
 // 4. Update Chapter Status (Owner action)
+export async function updateChapterControl(
+  chapterId: number,
+  isOpen: boolean,
+  announcement?: string
+): Promise<ChapterControlState> {
+  const updatedMap = await updateChapterStatus(chapterId, isOpen, announcement);
+  return updatedMap[chapterId];
+}
+
+export function broadcastChapterControls(controls: ChapterControlMap): void {
+  saveLocalChapterControls(controls);
+}
+
 export async function updateChapterStatus(
   chapterId: number,
   isOpen: boolean,

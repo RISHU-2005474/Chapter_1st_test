@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { StudentInfo, Chapter, ChapterControlState } from '../types';
-import { getAttempt, getAttemptAsync, StoredAttempt } from '../utils/examStorage';
+import { getAttempt, getAttemptAsync, StoredAttempt, saveRegistrationRecord } from '../utils/examStorage';
 import { SupabaseSetupModal } from './SupabaseSetupModal';
-import { Database, BookOpen, CheckCircle, Clock, Award, Shield, AlertCircle, ArrowRight, Sparkles, Shuffle, Lock, Eye, Code, Grid, Megaphone } from 'lucide-react';
+import { Database, BookOpen, CheckCircle, Clock, Award, Shield, AlertCircle, ArrowRight, Sparkles, Shuffle, Lock, Eye, Code, Grid, Megaphone, User, Mail, Phone, Hash } from 'lucide-react';
 import logoImg from '../assets/images/rishu_sir_logo_1786638561837.jpg';
 
 interface StudentRegisterProps {
@@ -21,6 +21,8 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
   onChangeChapter,
 }) => {
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [rollNumber, setRollNumber] = useState('');
   const [error, setError] = useState('');
   const [existingAttempt, setExistingAttempt] = useState<StoredAttempt | null>(null);
@@ -29,23 +31,24 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
 
   const isChapterLocked = chapterControl ? !chapterControl.isOpen : false;
 
-  // Check if roll number or email has already completed the test for THIS chapter
+  // Check if email has already completed the test for THIS chapter
   useEffect(() => {
     let isMounted = true;
-    if (rollNumber.trim()) {
-      const pastLocal = getAttempt(rollNumber.trim(), selectedChapter.id);
+    const identifier = email.trim() || rollNumber.trim();
+    if (identifier) {
+      const pastLocal = getAttempt(identifier, selectedChapter.id);
       setExistingAttempt(pastLocal);
       if (pastLocal) {
-        setError(`This Email / Roll Number (${pastLocal.student.rollNumber}) has already submitted the test for ${selectedChapter.title}.`);
+        setError(`This Email / Roll Number (${pastLocal.student.email || pastLocal.student.rollNumber}) has already submitted the test for ${selectedChapter.title}.`);
       } else {
         setError('');
         setIsCheckingDb(true);
-        getAttemptAsync(rollNumber.trim(), selectedChapter.id).then((pastRemote) => {
+        getAttemptAsync(identifier, selectedChapter.id).then((pastRemote) => {
           if (!isMounted) return;
           setIsCheckingDb(false);
           if (pastRemote) {
             setExistingAttempt(pastRemote);
-            setError(`This Email / Roll Number (${pastRemote.student.rollNumber}) has already submitted the test for ${selectedChapter.title}.`);
+            setError(`This Email / Roll Number (${pastRemote.student.email || pastRemote.student.rollNumber}) has already submitted the test for ${selectedChapter.title}.`);
           }
         });
       }
@@ -57,16 +60,29 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [rollNumber, selectedChapter.id]);
+  }, [email, rollNumber, selectedChapter.id, selectedChapter.title]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      setError('Please enter your full name.');
+      setError('Please enter candidate full name.');
       return;
     }
-    if (!rollNumber.trim()) {
-      setError('Please enter your Roll Number or Registration Email.');
+    if (!email.trim()) {
+      setError('Please enter candidate email address.');
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setError('Please enter a valid email address (e.g. student@gmail.com).');
+      return;
+    }
+    if (!phone.trim()) {
+      setError('Please enter candidate mobile / WhatsApp number.');
+      return;
+    }
+    if (phone.trim().length < 10) {
+      setError('Please enter a valid 10-digit mobile number.');
       return;
     }
 
@@ -75,16 +91,29 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
       return;
     }
 
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanRoll = rollNumber.trim() || `OL-${cleanEmail.slice(0, 4).toUpperCase()}-${phone.slice(-4)}`;
+
     // Double check with Supabase before starting
-    const past = (await getAttemptAsync(rollNumber.trim(), selectedChapter.id)) || getAttempt(rollNumber.trim(), selectedChapter.id);
+    const past = (await getAttemptAsync(cleanEmail, selectedChapter.id)) || getAttempt(cleanEmail, selectedChapter.id);
     if (past) {
       setExistingAttempt(past);
-      setError(`You have already submitted ${selectedChapter.title} with this Email / Roll Number. Re-attempting the same chapter is not allowed!`);
+      setError(`You have already submitted ${selectedChapter.title} with this Email. Re-attempting the same chapter is not allowed!`);
       return;
     }
 
+    const studentInfo: StudentInfo = {
+      name: name.trim(),
+      email: cleanEmail,
+      phone: phone.trim(),
+      rollNumber: cleanRoll,
+    };
+
+    // Log registration immediately in Supabase
+    saveRegistrationRecord(studentInfo, selectedChapter.id, selectedChapter.title);
+
     setError('');
-    onStartExam({ name: name.trim(), rollNumber: rollNumber.trim() });
+    onStartExam(studentInfo);
   };
 
   return (
@@ -179,12 +208,11 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
             </div>
           </div>
 
-
           <div className="border-t border-white/10 pt-4 text-xs text-slate-400 space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Database className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span className="text-emerald-300 font-semibold">Supabase Connected</span>
+                <span className="text-emerald-300 font-semibold">Supabase Cloud Sync</span>
               </div>
               <button
                 type="button"
@@ -197,16 +225,16 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
             </div>
             <div className="flex items-center gap-2">
               <Lock className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>Single Attempt Enforced per Chapter for each Email ID</span>
+              <span>1 Attempt per Candidate (Email & Mobile tracked)</span>
             </div>
             <div className="flex items-center gap-2">
               <Shuffle className="w-4 h-4 text-indigo-400 shrink-0" />
-              <span>Unique Randomized Question Order per Email</span>
+              <span>Unique Randomized Question Sequence</span>
             </div>
           </div>
         </div>
 
-        {/* Right Side: Student Registration Form */}
+        {/* Right Side: Candidate Registration Form */}
         <div className="lg:col-span-7 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-2xl">
           <div>
             <div className="mb-6">
@@ -214,7 +242,7 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
                 Candidate Registration
               </h3>
               <p className="text-sm text-slate-400">
-                Please enter your credentials to initiate the 60-minute proctored examination for <strong className="text-amber-300">{selectedChapter.title}</strong>.
+                Please enter candidate information. All details will be securely recorded in Rishu Sir's database for certificate and performance reporting.
               </p>
             </div>
 
@@ -263,7 +291,7 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
                       Chapter Test Already Submitted!
                     </h4>
                     <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                      This Email / Roll Number (<strong>{existingAttempt.student.rollNumber}</strong>) has already completed the examination for <strong>{selectedChapter.title}</strong> under candidate name <strong>{existingAttempt.student.name}</strong> with a score of <strong>{existingAttempt.stats.score}/100 ({existingAttempt.stats.percentage}%)</strong>.
+                      This Email (<strong>{existingAttempt.student.email || existingAttempt.student.rollNumber}</strong>) has already completed the examination for <strong>{selectedChapter.title}</strong> under candidate name <strong>{existingAttempt.student.name}</strong> with a score of <strong>{existingAttempt.stats.score}/100 ({existingAttempt.stats.percentage}%)</strong>.
                     </p>
                     <p className="text-[11px] text-amber-400/90 font-medium mt-1">
                       ⚠️ Re-attempting {selectedChapter.title} with the same Email is not allowed. You may still attempt other chapter tests using this Email.
@@ -287,55 +315,89 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
               </div>
             ) : null}
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Candidate Full Name */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
-                  Full Name <span className="text-red-400">*</span>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Full Name <span className="text-red-400">*</span></span>
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Rahul Sharma"
+                  placeholder="e.g. Rahul Kumar"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   disabled={isChapterLocked}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
 
+              {/* Candidate Email */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
-                  Roll Number / Registration Email <span className="text-red-400">*</span>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Email Address <span className="text-red-400">*</span></span>
                 </label>
                 <input
-                  type="text"
-                  placeholder="e.g. student@gmail.com or OL-2026-9842"
-                  value={rollNumber}
-                  onChange={(e) => setRollNumber(e.target.value)}
+                  type="email"
+                  placeholder="e.g. student@gmail.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   disabled={isChapterLocked}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 />
-                <p className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1.5">
-                  <Shuffle className="w-3.5 h-3.5 text-indigo-400 inline" />
-                  <span>Entering a different Email ID generates a unique randomized question sequence!</span>
-                </p>
               </div>
 
-              <div className="bg-indigo-950/30 border border-indigo-500/20 rounded-2xl p-4 text-xs text-slate-300 space-y-2">
-                <h4 className="font-semibold text-indigo-300 uppercase tracking-wider text-[11px]">
-                  Important Instructions:
+              {/* Grid: Mobile Number + Roll Number */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Mobile / WhatsApp <span className="text-red-400">*</span></span>
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="e.g. 9876543210"
+                    maxLength={15}
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/[^\d+]/g, ''))}
+                    disabled={isChapterLocked}
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
+                    <Hash className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Roll / Student ID <span className="text-slate-500 text-[10px] lowercase">(optional)</span></span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. OL-2026-01"
+                    value={rollNumber}
+                    onChange={(e) => setRollNumber(e.target.value)}
+                    disabled={isChapterLocked}
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-indigo-950/30 border border-indigo-500/20 rounded-2xl p-3.5 text-xs text-slate-300 space-y-1.5">
+                <h4 className="font-semibold text-indigo-300 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Important Instructions:</span>
                 </h4>
-                <ul className="list-disc list-inside space-y-1 text-slate-400">
-                  <li>Only <strong>1 attempt</strong> is permitted per Email address.</li>
-                  <li>Questions and choices are dynamically randomized based on your Email.</li>
-                  <li>The 60-minute countdown timer starts immediately upon clicking <strong>Start Test</strong>.</li>
-                  <li>When 00:00 is reached, your answers will automatically submit.</li>
+                <ul className="list-disc list-inside space-y-0.5 text-slate-400 text-[11px]">
+                  <li>Only <strong>1 attempt</strong> is permitted per Candidate Email ID.</li>
+                  <li>Your score, answers, and registration are stored in <strong>Rishu Sir's Portal Database</strong>.</li>
+                  <li>Countdown timer starts immediately upon clicking <strong>Start Test Now</strong>.</li>
                 </ul>
               </div>
 
               <button
                 type="submit"
                 disabled={!!existingAttempt || isChapterLocked}
-                className={`w-full py-4 font-bold rounded-2xl transition-all flex items-center justify-center gap-2 group text-base uppercase tracking-wider ${
+                className={`w-full py-3.5 font-bold rounded-2xl transition-all flex items-center justify-center gap-2 group text-sm sm:text-base uppercase tracking-wider ${
                   isChapterLocked
                     ? 'bg-slate-800 text-rose-300 cursor-not-allowed border border-rose-500/30'
                     : existingAttempt
@@ -357,8 +419,8 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
             </form>
           </div>
 
-          <p className="text-[11px] text-center text-slate-500 mt-6 italic">
-            Certified O Level Computer Science Examination • Single Attempt & Anti-Cheating Portal
+          <p className="text-[11px] text-center text-slate-500 mt-4 italic">
+            Certified O Level Computer Science Examination • Single Attempt & Database-Tracked Portal
           </p>
         </div>
       </div>
@@ -371,4 +433,5 @@ export const StudentRegister: React.FC<StudentRegisterProps> = ({
     </div>
   );
 };
+
 

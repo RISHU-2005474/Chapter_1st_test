@@ -6,14 +6,20 @@ interface SupabaseSetupModalProps {
   onClose: () => void;
 }
 
-export const SQL_SCHEMA_SCRIPT = `-- Run this SQL script in your Supabase SQL Editor:
--- https://supabase.com/dashboard/project/ejolboeirdtqcsuikayf/sql/new
+export const SQL_SCHEMA_SCRIPT = `-- ========================================================
+-- RISHU SIR TEST SERIES - COMPLETE SUPABASE SQL SETUP
+-- Run this script in Supabase SQL Editor:
+-- https://supabase.com/dashboard/project/_/sql/new
+-- ========================================================
 
--- 1. Examination Attempts Table
+-- 1. Examination Attempts Table (All Student Results & Scores)
 CREATE TABLE IF NOT EXISTS public.exam_attempts (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   email_roll TEXT UNIQUE NOT NULL,
   student_name TEXT NOT NULL,
+  email TEXT,
+  phone TEXT,
+  roll_number TEXT,
   chapter_id TEXT,
   chapter_title TEXT,
   chapter_code TEXT,
@@ -22,6 +28,9 @@ CREATE TABLE IF NOT EXISTS public.exam_attempts (
   percentage INT NOT NULL,
   passed BOOLEAN NOT NULL,
   grade TEXT NOT NULL,
+  correct_count INT DEFAULT 0,
+  incorrect_count INT DEFAULT 0,
+  unattempted_count INT DEFAULT 0,
   time_spent_seconds INT DEFAULT 0,
   user_answers JSONB,
   shuffled_questions JSONB,
@@ -29,16 +38,62 @@ CREATE TABLE IF NOT EXISTS public.exam_attempts (
   submitted_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Ensure columns exist if table was previously created with fewer columns
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='exam_attempts' AND column_name='email') THEN
+    ALTER TABLE public.exam_attempts ADD COLUMN email TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='exam_attempts' AND column_name='phone') THEN
+    ALTER TABLE public.exam_attempts ADD COLUMN phone TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='exam_attempts' AND column_name='roll_number') THEN
+    ALTER TABLE public.exam_attempts ADD COLUMN roll_number TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='exam_attempts' AND column_name='correct_count') THEN
+    ALTER TABLE public.exam_attempts ADD COLUMN correct_count INT DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='exam_attempts' AND column_name='incorrect_count') THEN
+    ALTER TABLE public.exam_attempts ADD COLUMN incorrect_count INT DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='exam_attempts' AND column_name='unattempted_count') THEN
+    ALTER TABLE public.exam_attempts ADD COLUMN unattempted_count INT DEFAULT 0;
+  END IF;
+END $$;
+
 -- Enable Row Level Security (RLS)
 ALTER TABLE public.exam_attempts ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Allow public access to exam_attempts" ON public.exam_attempts;
 CREATE POLICY "Allow public access to exam_attempts"
 ON public.exam_attempts
 FOR ALL
 USING (true)
 WITH CHECK (true);
 
--- 2. Owner Chapter Test Controls Table (Live / Lock Status)
+-- 2. Student Registrations Table (Real-time Candidate Logging)
+CREATE TABLE IF NOT EXISTS public.student_registrations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  reg_key TEXT UNIQUE NOT NULL,
+  student_name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT,
+  roll_number TEXT,
+  chapter_id TEXT,
+  chapter_title TEXT,
+  registered_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.student_registrations ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public access to student_registrations" ON public.student_registrations;
+CREATE POLICY "Allow public access to student_registrations"
+ON public.student_registrations
+FOR ALL
+USING (true)
+WITH CHECK (true);
+
+-- 3. Owner Chapter Test Controls Table (Live / Lock Status)
 CREATE TABLE IF NOT EXISTS public.chapter_controls (
   id INT PRIMARY KEY,
   is_open BOOLEAN DEFAULT true,
@@ -56,9 +111,9 @@ VALUES
   (5, true, '')
 ON CONFLICT (id) DO NOTHING;
 
--- Enable Row Level Security (RLS)
 ALTER TABLE public.chapter_controls ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Allow public access to chapter_controls" ON public.chapter_controls;
 CREATE POLICY "Allow public access to chapter_controls"
 ON public.chapter_controls
 FOR ALL

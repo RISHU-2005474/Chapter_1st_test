@@ -16,9 +16,10 @@ import { QuestionPalette } from './components/QuestionPalette';
 import { ResultDashboard } from './components/ResultDashboard';
 import { ConfirmationModal } from './components/ConfirmationModal';
 import { TimeoutModal } from './components/TimeoutModal';
+import { AdminDashboard } from './components/AdminDashboard';
 import { shuffleQuestionsForUser } from './utils/shuffle';
 import { saveAttempt, StoredAttempt } from './utils/examStorage';
-import { fetchChapterControls } from './utils/chapterControls';
+import { fetchChapterControls, updateChapterControl } from './utils/chapterControls';
 
 const TOTAL_QUESTIONS = 100;
 const EXAM_DURATION_SECONDS = 3600; // 60 minutes = 3600 seconds
@@ -69,6 +70,15 @@ export default function App() {
   useEffect(() => {
     syncWithBackend();
   }, [syncWithBackend]);
+
+  // Update a single chapter control and broadcast
+  const handleUpdateChapterControl = async (chapterId: number, isOpen: boolean, announcement?: string) => {
+    const updated = await updateChapterControl(chapterId, isOpen, announcement);
+    setChapterControls((prev) => ({
+      ...prev,
+      [chapterId]: updated,
+    }));
+  };
 
   // Chapter selection handler
   const handleSelectChapter = (chapter: Chapter) => {
@@ -224,7 +234,8 @@ export default function App() {
       return;
     }
 
-    const shuffled = shuffleQuestionsForUser(chapterQuestions, info.rollNumber);
+    const identifier = info.email || info.rollNumber;
+    const shuffled = shuffleQuestionsForUser(chapterQuestions, identifier);
     setStudent(info);
     setActiveQuestions(shuffled);
     setExamStatus('ongoing');
@@ -238,8 +249,13 @@ export default function App() {
   // View past completed attempt
   const handleViewPastAttempt = (attempt: StoredAttempt) => {
     setStudent(attempt.student);
+    if (attempt.chapterId) {
+      const match = CHAPTERS.find((c) => c.id === attempt.chapterId);
+      if (match) setSelectedChapter(match);
+    }
     setActiveQuestions(attempt.shuffledQuestions);
     setUserAnswers(attempt.userAnswers);
+    setTimeSpent(attempt.stats.timeSpentSeconds || 0);
     setExamStatus('submitted');
   };
 
@@ -330,6 +346,7 @@ export default function App() {
         examStarted={examStatus === 'ongoing'}
         examSubmitted={examStatus === 'submitted'}
         onChangeChapter={handleChangeChapter}
+        onOpenAdmin={() => setExamStatus('admin_dashboard')}
       />
 
       {/* Main Container Viewport */}
@@ -396,6 +413,16 @@ export default function App() {
             userAnswers={userAnswers}
             stats={calculateResults()}
             onRetake={handleRetake}
+          />
+        )}
+
+        {/* VIEW 4: Admin & Owner Dashboard */}
+        {examStatus === 'admin_dashboard' && (
+          <AdminDashboard
+            chapterControls={chapterControls}
+            onUpdateChapterControl={handleUpdateChapterControl}
+            onClose={() => setExamStatus('chapter_selection')}
+            onViewStudentResult={handleViewPastAttempt}
           />
         )}
       </main>

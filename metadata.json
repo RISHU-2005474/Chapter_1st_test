@@ -1,6 +1,6 @@
 {
   "name": "Rishu_Sir_Test_Series",
-  "description": "Interactive 100-question online exam portal for O Level Chapter 1: Introduction to Computer with live timer, question palette, and result analytics.",
+  "description": "Comprehensive O Level examination test series with real-time student registration, automated scoring, single-attempt enforcement, randomized questions, Supabase cloud sync, and teacher admin portal.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

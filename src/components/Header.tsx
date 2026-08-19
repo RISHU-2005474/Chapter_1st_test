@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, ShieldAlert, User, Grid } from 'lucide-react';
+import { Clock, ShieldAlert, User, Grid, ShieldCheck } from 'lucide-react';
 import { StudentInfo, Chapter } from '../types';
 import logoImg from '../assets/images/rishu_sir_logo_1786638561837.jpg';
 
@@ -13,6 +13,7 @@ interface HeaderProps {
   examStarted: boolean;
   examSubmitted: boolean;
   onChangeChapter?: () => void;
+  onOpenAdmin?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -25,6 +26,7 @@ export const Header: React.FC<HeaderProps> = ({
   examStarted,
   examSubmitted,
   onChangeChapter,
+  onOpenAdmin,
 }) => {
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -68,7 +70,7 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Middle/Right: Student Info & Live Timer */}
-      <div className="flex items-center gap-3 sm:gap-4">
+      <div className="flex items-center gap-2.5 sm:gap-4">
         {/* Change Chapter button (when not mid-exam) */}
         {!examStarted && onChangeChapter && (
           <button
@@ -77,7 +79,21 @@ export const Header: React.FC<HeaderProps> = ({
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/15 border border-white/10 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
           >
             <Grid className="w-3.5 h-3.5 text-amber-400" />
-            <span>All Chapters</span>
+            <span className="hidden sm:inline">All Chapters</span>
+            <span className="sm:hidden">Chapters</span>
+          </button>
+        )}
+
+        {/* Owner Admin Portal Button */}
+        {!examStarted && onOpenAdmin && (
+          <button
+            type="button"
+            onClick={onOpenAdmin}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 hover:text-amber-200 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md shadow-amber-500/10"
+            title="Owner & Teacher Portal (View All Candidate Submissions & Scores)"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+            <span>Admin Portal</span>
           </button>
         )}
 
@@ -135,4 +151,5 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
+
 

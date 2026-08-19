@@ -13,6 +13,8 @@ export interface Question {
 export interface StudentInfo {
   name: string;
   rollNumber: string;
+  email?: string;
+  phone?: string;
 }
 
 export interface Chapter {
@@ -29,7 +31,7 @@ export interface Chapter {
   accentColor: string;
 }
 
-export type ExamStatus = 'chapter_selection' | 'registration' | 'ongoing' | 'submitted';
+export type ExamStatus = 'chapter_selection' | 'registration' | 'ongoing' | 'submitted' | 'admin_dashboard';
 
 export interface ExamResultStats {
   score: number;
@@ -51,4 +53,15 @@ export interface ChapterControlState {
 }
 
 export type ChapterControlMap = Record<number, ChapterControlState>;
+
+export interface RegisteredStudent {
+  id?: string;
+  name: string;
+  email: string;
+  phone?: string;
+  rollNumber: string;
+  chapterId?: number | string;
+  chapterTitle?: string;
+  registeredAt?: string;
+}
 
